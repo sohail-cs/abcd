@@ -1,0 +1,92 @@
+import librosa
+import numpy as np
+import scipy.signal
+import speech_recognition as sr
+from textblob import TextBlob
+from pydub import AudioSegment
+import math
+import matplotlib.pyplot as plt
+
+
+# Function to analyze pitch
+def analyze_pitch(audio_file):
+    y, sr = librosa.load(audio_file)
+    # Compute the pitch
+    pitches, magnitudes = librosa.core.piptrack(y=y, sr=sr)
+    pitch = np.max(pitches)
+    return pitch
+
+
+# Function to analyze volume (Amplitude)
+def analyze_volume(audio_file):
+    audio = AudioSegment.from_file(audio_file)
+    rms = audio.rms
+    return rms
+
+
+# Function to analyze clarity using Speech Recognition (Convert speech to text)
+def analyze_clarity(audio_file):
+    recognizer = sr.Recognizer()
+    audio = sr.AudioFile(audio_file)
+    with audio as source:
+        audio_data = recognizer.record(source)
+    try:
+        text = recognizer.recognize_google(audio_data)
+        clarity_score = len(text.split())  # Simplified score, can be enhanced
+        return text, clarity_score
+    except sr.UnknownValueError:
+        return None, 0
+
+
+# Function to analyze confidence and nervousness using sentiment analysis (TextBlob)
+def analyze_sentiment(text):
+    if text is None:
+        return "Unable to process"
+    sentiment = TextBlob(text).sentiment.polarity
+    if sentiment > 0.1:
+        return "Confident"
+    elif sentiment < -0.1:
+        return "Nervous"
+    else:
+        return "Neutral"
+
+
+# Function to analyze speech rate (Speech speed)
+def analyze_speech_rate(audio_file):
+    y, sr = librosa.load(audio_file)
+    tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+    return tempo
+
+
+
+
+
+# Function to analyze all aspects
+def analyze_audio(audio_file):
+    # Pitch analysis
+    pitch = analyze_pitch(audio_file)
+    print(f"Pitch: {pitch} Hz")
+
+    # Volume analysis
+    volume = analyze_volume(audio_file)
+    print(f"Volume (RMS): {volume}")
+
+    # Clarity analysis
+    text, clarity_score = analyze_clarity(audio_file)
+    print(f"Clarity (Text extracted): {text if text else 'Unable to extract text'}")
+    print(f"Clarity Score (Word count): {clarity_score}")
+
+    # Sentiment (Confidence / Nervousness)
+    sentiment = analyze_sentiment(text)
+    print(f"Sentiment: {sentiment}")
+
+    # Speech rate (Speed)
+    rate = analyze_speech_rate(audio_file)
+    print(f"Speech rate (Tempo): {rate} BPM")
+
+
+
+
+# Example usage:
+audio_file = 'Audio File.wav'  # Replace with your audio file path
+analyze_audio(audio_file)
