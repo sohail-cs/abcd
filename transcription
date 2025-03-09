@@ -1,0 +1,102 @@
+import re
+import pandas as pd
+import language_tool_python
+import spacy
+import speech_recognition as sr
+import textstat
+
+nlp = spacy.load('en_core_web_sm')
+
+#Initialize grammer checker
+tool = language_tool_python.LanguageTool('en-us')
+
+def speech_text(AudioFile):
+    recognizer = sr.Recohnizer()
+
+    with sr.AudioFile(AudioFile) as source:
+        recognizer.adjust_for_ambient_noise(source)
+        audio_data = recognizer.record(source)
+
+    try:
+        print("Converting Speech to Text")
+        text = recognizer.recognize_google(audio_data)
+        with open("Speech_text.txt","w") as f:
+            f.write(text)
+
+    except sr.UnknownValueError:
+        return "Google speech recognition could not understand audio"
+
+    except sr.RequestError as e:
+        return f"Could not requesut results from Google"
+
+
+#Vocabulary Usage
+def vocabulary_usage(file):
+    with open(file,'r')as f:
+        line = f.read().lower()
+
+    words = re.findall(r'\b\w+\b',line)
+    doc = nlp(" ".join(words))
+
+    total_words = len(words)
+    unique_words = len(set(words))
+    ttr = (unique_words/total_words)*100 if total_words>0 else 0
+
+    readability = textstat.flesch_kincaid_grade(line)
+
+    return ttr,readability
+
+#Filler word classification
+def filler_word_classification(file):
+    with open(file,'r')as f:
+        words = re.findall(r'\b\w+\b',f.read().lower())
+
+    df = pd.read_excel("filler_words.xlsx",engine="openpyxl")
+    filler_words = set(df.iloc[:,0].dropna().values)
+    detected_filler_words = [word for word in words if word in filler_words]
+
+    return detected_filler_words
+
+
+### Grammar Usage
+def grammar_usage(word_file):
+    with open(word_file, 'r') as f:
+        text = f.read()
+
+    # Check the text for grammar issues
+    matches = tool.check(text)
+
+    if len(matches) == 0:
+        return "Grammar: Good", 10  # Perfect grammar
+    else:
+        error_count = len(matches)
+        if error_count <= 5:
+            return f"Grammar: Minor issues ({error_count} errors)", 8  # Minor issues
+        elif error_count <= 10:
+            return f"Grammar: Some issues ({error_count} errors)", 5  # Some issues
+        else:
+            return f"Grammar: Poor ({error_count} errors)", 2  # Poor grammar
+
+
+#Calculate Score and suggestions
+def score(ttr,readability,filler_words,grammer,):
+    ttr_score = (ttr/100)*10
+    readbility_score = 10 if readability <= 8 else 6
+
+    filler_word_count = len(filler_words)
+    filler_word_score = 10- filler_word_count
+
+    grammar_score = grammer[1]
+
+    final_score = (
+        0.4*(ttr_score+readbility_score)+0.2*filler_word_score+0.4*grammar_score)
+
+    return round(final_score,2)
+
+ttr,readablity = vocabulary_usage("Speech_text.txt")
+filler_words = filler_word_classification("Speech_text.txt")
+
+grammer = grammar_usage("Speech_text.txt")
+
+x = score(ttr,readablity,filler_words,grammer)
+print(x)
