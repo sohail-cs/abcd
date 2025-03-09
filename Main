@@ -1,0 +1,36 @@
+import proctoring
+import fileProcessing
+import transcription
+
+# Split interview application into video and audio
+fileProcessing.split_video_audio()
+
+
+################################################################### Video ####################################
+############Iris Tracker###########
+iris_tracking = proctoring.iris_tracking()
+
+############Emotion Detection using face##############
+predict_emotion = proctoring.predict()
+
+############Full body tracking##################
+full_body_tracking = proctoring.body_tracking()
+
+
+################################################################### Audio ####################################
+######## Text2Speech##########
+text2speech = transcription.speech_text()
+
+####Vocabulary Usage#####
+vocabulary_usage = transcription.vocabulary_usage()
+
+####Filler Words#######
+filler_word = transcription.filler_word_classification()
+
+####Grammer
+grammer = transcription.grammar_usage()
+
+###Score
+transcription_score = transcription.score()
+
+
